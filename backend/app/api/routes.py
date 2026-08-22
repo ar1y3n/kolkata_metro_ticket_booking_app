@@ -3,6 +3,7 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from app.db.postgres_client import get_db, Ticket
+from app.db.sqlite_client import get_sqlite_conn
 from app.services.unlock_service import verify_and_unlock_system
 from app.services.graph_engine import get_metro_route
 from pydantic import BaseModel, Field
@@ -23,7 +24,14 @@ def get_all_stations():
     Fetches all metro stations and their line colors from the SQLite static database.
     """
     try:
-       pass
+        with get_sqlite_conn() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT id, name, line FROM stations ORDER BY name, line;")
+            rows = cursor.fetchall()
+            return [
+                StationResponseSchema(id=row["id"], name=row["name"], line=row["line"])
+                for row in rows
+            ]
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to fetch stations from database: {str(e)}")
 
